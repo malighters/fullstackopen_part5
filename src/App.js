@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Notification from './components/Notification'
 import Blog from './components/Blog'
 import blogService from './services/blogs'
+import BlogForm from './components/BlogForm'
 import loginService from './services/login'
 
 const App = () => {
@@ -17,6 +18,8 @@ const App = () => {
   const [password, setPassword] = useState('') 
   const [user, setUser] = useState(null)
 
+  const [noteFormVisible, setNoteFormVisible] = useState(false)
+
   useEffect(() => {
     blogService.getAll().then(blogs =>
       setBlogs( blogs )
@@ -28,6 +31,7 @@ const App = () => {
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
       setUser(user)
+      blogService.setToken(user.token)
     }
   }, [])
 
@@ -57,8 +61,7 @@ const App = () => {
         notify(`a new blog ${blogObject.title} added`)
       })
       .catch(error => {
-        console.log(error)
-        notify(`You've missed some data`, 'alert')
+        notify(`happened error: ${error}`)
       })
   }
 
@@ -78,42 +81,37 @@ const App = () => {
       setUsername('')
       setPassword('')
     } catch (exception) {
-      notify('wrong username or password', 'alert')
+      setNotification('Wrong credentials')
+      setTimeout(() => {
+        setNotification(null)
+      }, 5000)
     }
   }
 
-  const blogForm = () => (
-    <form onSubmit={addBlog}>
+  const blogForm = () => {
+    const hideWhenVisible = { display: noteFormVisible ? 'none' : '' }
+    const showWhenVisible = { display: noteFormVisible ? '' : 'none' }
+
+    return (
       <div>
-        title
-          <input
-          type="text"
-          value={newTitle}
-          name="title"
-          onChange={({ target }) => setNewTitle(target.value)}
-        />
+        <div style={hideWhenVisible}>
+          <button onClick={() => setNoteFormVisible(true)}>new blog</button>
+        </div>
+        <div style={showWhenVisible}>
+          <BlogForm
+            handleSubmit={addBlog}
+            handleTitleChange={({ target }) => setNewTitle(target.value)}
+            handleAuthorChange={({ target }) => setNewAuthor(target.value)}
+            handleUrlChange={({ target }) => setNewUrl(target.value)}
+            title={newTitle}
+            author={newAuthor}
+            url={newUrl} 
+          />
+          <button onClick={() => setNoteFormVisible(false)}>cancel</button>
+        </div>
       </div>
-      <div>
-        author
-          <input
-          type="text"
-          value={newAuthor}
-          name="autor"
-          onChange={({ target }) => setNewAuthor(target.value)}
-        />
-      </div>
-      <div>
-        url
-          <input
-          type="text"
-          value={newUrl}
-          name="url"
-          onChange={({ target }) => setNewUrl(target.value)}
-        />
-      </div>
-      <button type="submit">create</button>
-    </form>
-  )
+    )
+  }
 
   const loginForm = () => (
     <form onSubmit={handleLogin}>
@@ -152,8 +150,8 @@ const App = () => {
 
   return (
     <div>
-      <h2>blogs</h2>
       <Notification notification={notification}/>
+      <h2>blogs</h2>
       <p>{user.name} logged in 
         <button onClick={() => {
           window.localStorage.removeItem('loggedBlogappUser')
